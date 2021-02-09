@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/aop 
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!--1.指定service的包扫描路径相关 @service @Autuware @Resource  -->
+	<context:component-scan base-package="com.ssm.service"></context:component-scan>
+
+	<!--2.指定外部属性文件的位置 -->
+	<context:property-placeholder location="classpath:db.properties" />
+
+	<!-- 3.使用druid数据源 连接池 -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="${jdbc.driverClassName}"></property>
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.username}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+	</bean>
+
+	<!--spring整合mybatis  -->
+
+	<!--声明一个spring整合mybatis的核心类  -->
+	<bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 指定相关数据源 -->
+		<property name="dataSource" ref="dataSource"></property>
+		<!-- 指定映射文件扫描为止 -->
+		<property name="mapperLocations" value="classpath:mapper/*"></property>
+		<!-- <property name="configLocation" value="com.zhenzhen.dao"></property> -->
+		<!-- 配置别名 -->
+		<property name="typeAliasesPackage" value="com.ssm.entity"></property>
+		<!-- 配置分页插件 -->
+		<property name="plugins">
+			<array>
+				<bean class="com.github.pagehelper.PageInterceptor">
+					<property name="properties">
+						<!--使用下面的方式配置参数，一行配置一个 -->
+						<value>
+							reasonable=true
+						</value>
+					</property>
+				</bean>
+			</array>
+		</property>
+
+	</bean>
+
+	<!--声明一个核心类，让这个核心类找到Dao接口,从而执行mapper的sql语句  -->
+	<bean id="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!--指定dao的位置  -->
+		<property name="basePackage" value="com.ssm.dao"></property>
+	</bean>
+
+	<!--5、 配置jdbc事务管理器 -->
+	<bean id="transactionManager"
+		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+
+
+	<!--6、 配置事务 transaction-manager:表示关联的事务管理器是谁 -->
+	<tx:advice transaction-manager="transactionManager" id="txAdvice">
+		<!-- 事务属性配置 -->
+		<tx:attributes>
+			<!-- 以find.select get开头的方法为只读事务，用来提高数据库的性能 -->
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="select*" read-only="true" />
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="load*" read-only="true" />
+			<tx:method name="list*" read-only="true" />
+			<!-- 其他的方法为默认事务 -->
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	<!-- 7、配置aop -->
+	<aop:config>
+		<!-- 配置切点表达式 -->
+		<aop:pointcut expression="execution(* com.ssm.service.impl.*.*(..))"
+					  id="pointcut" />
+		<!-- 关联事务 -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut" />
+
+	</aop:config>
+
+	<!-- 加载kafka生产者的配置 producer.xml -->
+<!--	<import resource="classpath:producer.xml" />-->
+
+<!--	&lt;!&ndash; 加载es的配置文件 &ndash;&gt;-->
+<!--	&lt;!&ndash; <import resource="classpath:es.xml" /> &ndash;&gt;-->
+
+<!--	&lt;!&ndash; 加载kafka消费者的配置文件 &ndash;&gt;-->
+<!--	<import resource="classpath:consumer.xml" />-->
+<!--	&lt;!&ndash; 加载redis的配置文件 &ndash;&gt;-->
+<!--	<import resource="classpath:redis.xml" />-->
+
+
+</beans>
